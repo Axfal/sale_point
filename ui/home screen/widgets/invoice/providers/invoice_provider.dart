@@ -38,7 +38,6 @@ class InvoiceProvider with ChangeNotifier {
   List<ContactsModel> _contactSuggestions = [];
   List<ProductModel> products = [];
   List<ProductModel> _invoiceProducts = [];
-
   double get totalAmount {
     return _invoiceProducts.fold(
         0, (total, product) => total + (product.salesPrice * product.quantity));
@@ -58,9 +57,79 @@ class InvoiceProvider with ChangeNotifier {
   bool get isUsingDefaultTaxes => _isUsingDefaultTaxes;
   bool get isLoadingTaxes => _isLoadingTaxes;
   bool get isDetailsExpanded => _isDetailsExpanded;
-
   Data? _selectedTaxItem;
   Data? get selectedTaxItem => _selectedTaxItem;
+
+  void clearInvoiceFields() {
+    print('🧹 Clearing invoice fields...');
+
+    // Preserve tax settings
+    final currentTaxStatus = _taxStatus;
+    final currentSelectedTax = _selectedTax;
+    final currentTaxes = _availableTaxes;
+    final isUsingDefaultTaxesState = _isUsingDefaultTaxes;
+
+    // Clear customer info
+    _customerName = '';
+    _contactId = null;
+    // _datedToday = DateTime.now();
+    // _dueToday = null;
+
+    // Clear products
+    _invoiceProducts.clear();
+
+    print('✨ Cleared customer info and products');
+
+    // Restore tax settings
+    _taxStatus = currentTaxStatus;
+    _selectedTax = currentSelectedTax;
+    _availableTaxes = currentTaxes;
+    _isUsingDefaultTaxes = isUsingDefaultTaxesState;
+
+    print('✅ Tax settings preserved');
+    print('📝 Invoice ready for new entry');
+
+    notifyListeners();
+  }
+
+  Future<void> fetchContactSuggestions(String query) async {
+    if (query.isEmpty) {
+      _contactSuggestions = [];
+      notifyListeners();
+      return;
+    }
+    // _customerName = query;
+    // notifyListeners();
+    try {
+      bool isExpired = await _mySharedPrefs.isContactsCacheExpired();
+      if (!isExpired) {
+        _allContacts = await _mySharedPrefs.getContacts();
+      } else {
+    final contactsFromServer = await contactsService.getAllContacts();
+    _allContacts = contactsFromServer;
+      await _mySharedPrefs.setContacts(contactsFromServer);
+    }
+
+    _contactSuggestions = _allContacts.where((contact) {
+      return contact.name?.toLowerCase().contains(query.toLowerCase()) ??
+          false;
+    }).toList();
+
+    notifyListeners();
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<void> setCustomerName(String? name) async {
+    _customerName = name;
+    final contact = _allContacts.firstWhere(
+          (c) => c.name == name,
+      orElse: () => ContactsModel(contactId: '', name: name),
+    );
+    _contactId = contact.contactId;
+    notifyListeners();
+  }
 
   void setSelectedTaxItem(Data? tax) {
     _selectedTaxItem = tax;
@@ -197,44 +266,6 @@ class InvoiceProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchContactSuggestions(String query) async {
-    if (query.isEmpty) {
-      _contactSuggestions = [];
-      notifyListeners();
-      return;
-    }
-
-    try {
-      bool isExpired = await _mySharedPrefs.isContactsCacheExpired();
-      if (!isExpired) {
-        _allContacts = await _mySharedPrefs.getContacts();
-      } else {
-        final contactsFromServer = await contactsService.getAllContacts();
-        _allContacts = contactsFromServer;
-        await _mySharedPrefs.setContacts(contactsFromServer);
-      }
-
-      _contactSuggestions = _allContacts.where((contact) {
-        return contact.name?.toLowerCase().contains(query.toLowerCase()) ??
-            false;
-      }).toList();
-
-      notifyListeners();
-    } catch (e) {
-      // Handle error
-    }
-  }
-
-  Future<void> setCustomerName(String? name) async {
-    _customerName = name;
-    final contact = _allContacts.firstWhere(
-      (c) => c.name == name,
-      orElse: () => ContactsModel(contactId: '', name: name),
-    );
-    _contactId = contact.contactId;
-    notifyListeners();
-  }
-
   // Add this getter to retrieve userId
   Future<int> getUserId() async {
     final userId = await _mySharedPrefs.getUserId();
@@ -368,38 +399,6 @@ class InvoiceProvider with ChangeNotifier {
 
   void setSelectedTax(Map<String, dynamic>? tax) {
     _selectedTax = tax;
-    notifyListeners();
-  }
-
-  void clearInvoiceFields() {
-    print('🧹 Clearing invoice fields...');
-
-    // Preserve tax settings
-    final currentTaxStatus = _taxStatus;
-    final currentSelectedTax = _selectedTax;
-    final currentTaxes = _availableTaxes;
-    final isUsingDefaultTaxesState = _isUsingDefaultTaxes;
-
-    // Clear customer info
-    _customerName = null;
-    _contactId = null;
-    _datedToday = DateTime.now();
-    _dueToday = null;
-
-    // Clear products
-    _invoiceProducts.clear();
-
-    print('✨ Cleared customer info and products');
-
-    // Restore tax settings
-    _taxStatus = currentTaxStatus;
-    _selectedTax = currentSelectedTax;
-    _availableTaxes = currentTaxes;
-    _isUsingDefaultTaxes = isUsingDefaultTaxesState;
-
-    print('✅ Tax settings preserved');
-    print('📝 Invoice ready for new entry');
-
     notifyListeners();
   }
 

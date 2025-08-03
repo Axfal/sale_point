@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:point_of_sales/ui/home%20screen/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:point_of_sales/utils/constants/app_colors.dart';
 import 'package:point_of_sales/utils/extensions/sized_box_extension.dart';
@@ -1169,6 +1170,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         notes: _getPaymentNotes(paymentProvider),
       );
 
+      print("tax status ====> ${widget.invoiceDetails.taxStatus}");
+      print("taxAmount ====> ${widget.invoiceDetails.taxAmount}");
+
       // For Pay Later, we need to set the accountId to null in the provider as well
       if (paymentProvider.selectedPaymentMethod == PaymentMethod.pay_later) {
         invoiceProvider.setAccountId(null);
@@ -1201,7 +1205,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               'Invoice created successfully! Payment pending.');
 
           // Navigate back to home screen
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  HomeScreen(scaffoldKey: GlobalKey<ScaffoldState>()),
+            ),
+          );
 
           print('✨ Invoice cleared and returned to home screen');
           return;
@@ -1231,8 +1241,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           // Show success message
           ShowToastDialog.showToast('Payment completed successfully!');
 
-          // Navigate back to home screen
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  HomeScreen(scaffoldKey: GlobalKey<ScaffoldState>()),
+            ),
+          );
 
           print('✨ Invoice cleared and returned to home screen');
         } else {

@@ -7,7 +7,6 @@ import 'package:point_of_sales/models/tax_model.dart';
 import 'package:point_of_sales/ui/home%20screen/widgets/invoice/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/invoice_model.dart';
-import '../../../../models/user_model.dart';
 import '../../../../utils/constants/app_colors.dart';
 import '../../../../utils/helpers/show_toast_dialouge.dart';
 import '../../../invoice details/invoice_details.dart';
@@ -82,14 +81,10 @@ class _InvoiceCardState extends State<InvoiceCard> {
 
   @override
   Widget build(BuildContext context) {
+    final invoiceProvider = Provider.of<InvoiceProvider>(context);
+
     return Consumer<InvoiceProvider>(
       builder: (context, invoiceProvider, child) {
-        final invoiceNumber = invoiceProvider.invoiceNumber;
-        if (invoiceNumber != null &&
-            invoiceNumber.isNotEmpty &&
-            invoiceNumberController.text != invoiceNumber) {
-          invoiceNumberController.text = invoiceNumber;
-        }
         return Column(
           children: [
             _buildInvoiceDetailsExpansion(invoiceProvider),
@@ -208,7 +203,7 @@ class _InvoiceCardState extends State<InvoiceCard> {
         Padding(
           padding: EdgeInsets.symmetric(vertical: 8.h),
           child: TextField(
-            autofocus: false,
+            // autofocus: false,
             controller: customerNameController,
             onChanged: (value) async {
               await invoiceProvider.fetchContactSuggestions(value);
