@@ -5,7 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:point_of_sales/utils/constants/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:point_of_sales/ui/sales/provider/sales_provider.dart';
-import '../../models/product_model.dart';
 import 'package:intl/intl.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -18,7 +17,7 @@ class SalesScreen extends StatefulWidget {
 class _SalesScreenState extends State<SalesScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  Timer? _debounceTimer; // Make the debounceTimer nullable
+  Timer? _debounceTimer;
   final FocusNode _focusNode = FocusNode();
 
   @override
@@ -32,16 +31,106 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   void dispose() {
-    _debounceTimer?.cancel(); // Cancel the timer if it's not null
+    _debounceTimer?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  void showDeleteDialog(BuildContext context, VoidCallback onDelete) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: SizedBox(
+            width: screenWidth * 0.85, // 85% of screen width
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.delete_forever_rounded,
+                      color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Delete Invoice?',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: MyAppColors.blackColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Are you sure you want to delete this invoice? This action cannot be undone.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: MyAppColors.greyColor,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                MyAppColors.greyColor.withValues(alpha: 0.2),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: MyAppColors.blackColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context); // Close dialog
+                            onDelete(); // Execute delete logic
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MyAppColors.redColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _debounceSearch() {
     if (_debounceTimer?.isActive ?? false) {
-      // Check if debounceTimer is active
       _debounceTimer?.cancel();
     }
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -65,8 +154,7 @@ class _SalesScreenState extends State<SalesScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: MyAppColors.whiteColor),
           // iOS style back button
           onPressed: () {
-            Navigator.pop(
-                context); // Pop the current screen from the navigation stack
+            Navigator.pop(context);
           },
         ),
         elevation: 4,
@@ -76,16 +164,16 @@ class _SalesScreenState extends State<SalesScreen> {
               return IconButton(
                 icon: provider.isLoading
                     ? const CupertinoActivityIndicator(
-                  color: MyAppColors.whiteColor,
-                  // strokeWidth: 2,
-                )
+                        color: MyAppColors.whiteColor,
+                        // strokeWidth: 2,
+                      )
                     : const Icon(
-                  Icons.refresh,
-                  color: MyAppColors.whiteColor,
-                ),
+                        Icons.refresh,
+                        color: MyAppColors.whiteColor,
+                      ),
                 onPressed: () {
                   if (!provider.isLoading) {
-                    FocusScope.of(context).unfocus(); // 👈 This line is the fix
+                    FocusScope.of(context).unfocus();
                     provider.refreshInvoices();
                   }
                 },
@@ -112,148 +200,195 @@ class _SalesScreenState extends State<SalesScreen> {
                   ),
                 ),
                 Expanded(
-                  child: provider.isLoading && provider.invoices.isEmpty
-                      ? const Center(child: CupertinoActivityIndicator())
-                      : provider.invoices.isEmpty
-                      ? const Center(
-                      child: Text('No invoices found.',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: MyAppColors.blackColor)))
-                      : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: provider.invoices.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == provider.invoices.length) {
-                        return provider.isLoading
-                            ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Center(
-                              child:
-                              CupertinoActivityIndicator()),
-                        )
-                            : const SizedBox.shrink();
-                      }
-
-                      final invoice = provider.invoices[index];
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        elevation: 8,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Invoice #${invoice.invoiceNumber}',
+                    child: provider.isLoading && provider.invoices.isEmpty
+                        ? const Center(child: CupertinoActivityIndicator())
+                        : provider.invoices.isEmpty
+                            ? const Center(
+                                child: Text('No invoices found.',
                                     style: TextStyle(
-                                        fontSize: 20,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                        MyAppColors.blackColor),
-                                  ),
-                                  Text(
-                                    _formatReadableDate(
-                                        invoice.datedToday),
-                                    style: TextStyle(
-                                        color: MyAppColors.greyColor,
-                                        fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '👤 ${invoice.customerName}',
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: MyAppColors.blackColor),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text('📦 Products:',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: MyAppColors.blackColor)),
-                              const SizedBox(height: 6),
-                              ...invoice.products.map((product) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                          Icons.check_circle_outline,
-                                          size: 16,
-                                          color:
-                                          MyAppColors.greenColor),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                          child: Text(
-                                              product.productName,
-                                              style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: MyAppColors
-                                                      .blackColor))),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              const Divider(height: 20),
-                              Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('💰 Total:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: MyAppColors
-                                              .blackColor)),
-                                  Text(
-                                    '\$${invoice.totalAmount}',
-                                    style: const TextStyle(
-                                        color: MyAppColors.greenColor,
-                                        fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('📅 Due Date:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: MyAppColors
-                                              .blackColor)),
-                                  Text(
-                                      _formatReadableDate(
-                                          invoice.dueToday),
-                                      style: const TextStyle(
-                                          color: MyAppColors
-                                              .lightRedColor,
-                                          fontWeight:
-                                          FontWeight.bold)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                                        color: MyAppColors.blackColor)))
+                            : ListView.builder(
+                                controller: _scrollController,
+                                itemCount: provider.invoices.length + 1,
+                                itemBuilder: (context, index) {
+                                  // Show loader at the end
+                                  if (index == provider.invoices.length) {
+                                    return provider.isLoading
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(12),
+                                            child: Center(
+                                                child:
+                                                    CupertinoActivityIndicator()),
+                                          )
+                                        : const SizedBox.shrink();
+                                  }
+
+                                  // Reverse data manually
+                                  final reversedInvoices =
+                                      provider.invoices.reversed.toList();
+                                  final invoice = reversedInvoices[index];
+
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    elevation: 6,
+                                    shadowColor: Colors.black12,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  'Invoice #${invoice.invoiceNumber}',
+                                                  style: const TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        MyAppColors.blackColor,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: Icon(Icons.edit,
+                                                    color: MyAppColors
+                                                        .appBarColor),
+                                                tooltip: 'Edit Invoice',
+                                                onPressed: () {
+                                                  // Handle edit
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.delete_outline,
+                                                    color:
+                                                        MyAppColors.redColor),
+                                                tooltip: 'Delete Invoice',
+                                                onPressed: () {
+                                                  showDeleteDialog(context, () {
+                                                    // Perform delete logic
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _formatReadableDate(
+                                                invoice.datedToday),
+                                            style: const TextStyle(
+                                              color: MyAppColors.greyColor,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            '👤 ${invoice.customerName}',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                              color: MyAppColors.blackColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            '📦 Products:',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: MyAppColors.blackColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          ...invoice.products.map((product) {
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 4.0),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(
+                                                      Icons
+                                                          .check_circle_outline,
+                                                      size: 16,
+                                                      color: MyAppColors
+                                                          .greenColor),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      product.productName,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        color: MyAppColors
+                                                            .blackColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                          const Divider(
+                                              height: 24, thickness: 0.8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                '💰 Total:',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: MyAppColors.blackColor,
+                                                ),
+                                              ),
+                                              Text(
+                                                '\$${invoice.totalAmount}',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: MyAppColors.greenColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                '📅 Due Date:',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: MyAppColors.blackColor,
+                                                ),
+                                              ),
+                                              Text(
+                                                _formatReadableDate(
+                                                    invoice.dueToday),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      MyAppColors.lightRedColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )),
               ],
             ),
           );
@@ -264,10 +399,9 @@ class _SalesScreenState extends State<SalesScreen> {
 
   String _formatReadableDate(String date) {
     final dateTime = DateTime.parse(date);
-    final formatter = DateFormat('dd/MM/yyyy hh:mm a'); // includes time in 12-hour format
+    final formatter = DateFormat('dd/MM/yyyy');
     return formatter.format(dateTime);
   }
-
 
   Widget _buildFilterBar(SalesProvider provider) {
     return Padding(
@@ -289,13 +423,13 @@ class _SalesScreenState extends State<SalesScreen> {
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _focusNode.requestFocus(); // Maintain focus
-                    provider.updateSearch('');
-                  },
-                )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _focusNode.requestFocus(); // Maintain focus
+                          provider.updateSearch('');
+                        },
+                      )
                     : null,
                 border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12))),

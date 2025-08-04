@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:point_of_sales/ui/home%20screen/home_screen.dart';
+import 'package:point_of_sales/ui/sales/provider/sales_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:point_of_sales/utils/constants/app_colors.dart';
 import 'package:point_of_sales/utils/extensions/sized_box_extension.dart';
@@ -1161,11 +1162,11 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         datedToday: widget.invoiceDetails.datedToday,
         dueToday: widget.invoiceDetails.dueToday,
         invoiceNumber: widget.invoiceDetails.invoiceNumber,
-        products: widget.invoiceDetails.products,
+        products: invoiceProvider.invoiceProducts,
         taxStatus: widget.invoiceDetails.taxStatus,
         selectedTax: widget.invoiceDetails.selectedTax,
-        taxAmount: widget.invoiceDetails.taxAmount,
-        subtotal: widget.invoiceDetails.subtotal,
+        taxAmount: widget.invoiceDetails.taxAmount ?? 0,
+        subtotal: invoiceProvider.totalAmount,
         paymentMethod: paymentProvider.selectedPaymentMethod?.displayName,
         notes: _getPaymentNotes(paymentProvider),
       );
@@ -1190,6 +1191,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
             ? paymentProvider.partialAmountController.text
             : invoiceProvider.totalWithTax;
         final paymentDate = DateTime.now();
+        final saleProvider = Provider.of<SalesProvider>(context, listen: false);
 
         // For Pay Later, we don't need to make a payment API call
         if (paymentProvider.selectedPaymentMethod == PaymentMethod.pay_later) {
@@ -1204,6 +1206,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           ShowToastDialog.showToast(
               'Invoice created successfully! Payment pending.');
 
+           await saleProvider.refreshInvoices();
           // Navigate back to home screen
           Navigator.pushReplacement(
             context,
@@ -1240,7 +1243,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           bankProvider.setSelectedBank(null);
           // Show success message
           ShowToastDialog.showToast('Payment completed successfully!');
-
+          await saleProvider.refreshInvoices();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
