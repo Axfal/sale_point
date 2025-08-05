@@ -139,7 +139,6 @@ class ApiClient {
     }
   }
 
-  /// 🔹 **Response Handling**
   Map<String, dynamic>? _processResponse(Response response) {
     final responseData = response.data;
 
@@ -155,9 +154,15 @@ class ApiClient {
           : (status is String ? status.toLowerCase() == "success" : false);
 
       /// ✅ Normalize message
-      result["message"] ??= "Operation completed";
+      if (result["message"] == null && result["error"] != null) {
+        result["message"] = result["error"];
+      } else {
+        result["message"] ??= "Operation completed";
+      }
 
-      /// Return full normalized response
+      /// ✅ Normalize error
+      result["error"] = responseData["error"] ?? "";
+
       return result;
     }
 
@@ -173,27 +178,39 @@ class ApiClient {
       final response = error.response;
       final data = response?.data;
 
-      if (kIsWeb && error.type == DioExceptionType.connectionError) {
+      print("❌ Dio Error: ${error.message}");
+      print("📨 Error Response Data: $data");
+
+      if (data is Map<String, dynamic>) {
+        final errorMessage = data['error']?.toString() ??
+            data['message']?.toString() ??
+            error.message ??
+            'An unknown error occurred';
+
         return {
           "success": false,
-          "message":
-              "Network connection error. Please check your internet connection.",
-          "statusCode": 503
+          "error": data['error'] ?? "",
+          "message": errorMessage,
+          "statusCode": response?.statusCode ?? 500
         };
       }
 
-      print("❌ Dio Error: ${error.message}");
-      print("📨 Response Data: ${response?.data}");
-
+      // If data is not a map (e.g., string, HTML error page)
       return {
         "success": false,
-        "message": error.message ?? "An error occurred",
+        "error": "",
+        "message": error.message ?? "An unknown error occurred",
         "statusCode": response?.statusCode ?? 500
       };
     }
 
+    // Handle non-Dio exceptions
     print("❌ Unknown Error: $error");
-
-    return {"success": false, "message": error.toString(), "statusCode": 500};
+    return {
+      "success": false,
+      "error": "",
+      "message": error.toString(),
+      "statusCode": 500
+    };
   }
 }

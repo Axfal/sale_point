@@ -12,6 +12,8 @@ class SalesService {
   final String _postInvoice = "/add_sale.php";
   final String _getInvoices = "/get_sale.php";
   final String _invoicePayment = "/invoice_payment.php";
+  final String _updateSaleInvoice = "/update_invoice.php";
+  final String _deleteSaleInvoice = "/xero_invoice_void.php";
 
   Future<Map<String, dynamic>?> addSale({required InvoiceModel invoice}) async {
     final List<Map<String, dynamic>> productList = invoice.products
@@ -68,6 +70,47 @@ class SalesService {
     }
 
     return [];
+  }
+
+  /// update sale invoice section
+  Future<dynamic> updateSaleInvoice(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiClient.put(_updateSaleInvoice, data);
+      if (response != null &&
+          response['success'] == true &&
+          response['message'] != null) {
+        print('success is: ===> ${response['success']}');
+        print('message ===> ${response['message']}');
+        return response;
+      }
+    } catch (e) {
+      print('error at service side');
+    }
+  }
+
+  /// Deletes a sale invoice on the server.
+  Future<dynamic> deleteSaleInvoice(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiClient.post(_deleteSaleInvoice, data);
+
+      if (response is Map<String, dynamic>) {
+        print("response ======>>>>>123.>>>>> ${response}");
+        if (response['success'] == true && response['message'] != null) {
+          return response;
+        } else if (response['success'] == false && response['error'] != null) {
+          ShowToastDialog.showToast(response['error'].toString());
+        } else {
+          print("response ===>>> ${response['error'].toString()}");
+          ShowToastDialog.showToast('Unexpected response from server.');
+        }
+      } else {
+        ShowToastDialog.showToast('Invalid response format from server.');
+      }
+    } catch (e) {
+      debugPrint("deleteSaleInvoice error: $e");
+      ShowToastDialog.showToast('Failed to delete invoice. Try again.');
+    }
+    return null;
   }
 
   /// Posts payment details to the invoice_payment API

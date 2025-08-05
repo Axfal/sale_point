@@ -38,7 +38,7 @@ class _SalesScreenState extends State<SalesScreen> {
     super.dispose();
   }
 
-  void showDeleteDialog(BuildContext context, VoidCallback onDelete) {
+  void showDeleteDialog(BuildContext context, Future<void> Function() onDelete) {
     final screenWidth = MediaQuery.of(context).size.width;
 
     showDialog(
@@ -51,7 +51,7 @@ class _SalesScreenState extends State<SalesScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: SizedBox(
-            width: screenWidth * 0.85, // 85% of screen width
+            width: screenWidth * 0.85,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
@@ -85,7 +85,7 @@ class _SalesScreenState extends State<SalesScreen> {
                           onPressed: () => Navigator.pop(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
-                                MyAppColors.greyColor.withValues(alpha: 0.2),
+                            MyAppColors.greyColor.withOpacity(0.2),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -101,9 +101,9 @@ class _SalesScreenState extends State<SalesScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context); // Close dialog
-                            onDelete(); // Execute delete logic
+                          onPressed: () async {
+                            Navigator.pop(context); // Close the dialog first
+                            await onDelete(); // Then execute the async delete logic
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: MyAppColors.redColor,
@@ -272,9 +272,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     color:
                                                         MyAppColors.redColor),
                                                 tooltip: 'Delete Invoice',
-                                                onPressed: () {
-                                                  showDeleteDialog(context, () {
-                                                    // Perform delete logic
+                                                onPressed: () async{
+                                                  showDeleteDialog(context, () async {
+                                                    await provider.deleteInvoice(invoice.invoiceNumber);
                                                   });
                                                 },
                                               ),

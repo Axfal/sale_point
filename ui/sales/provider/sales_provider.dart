@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:point_of_sales/utils/helpers/show_toast_dialouge.dart';
 import '../../../models/sale summary/invoice_summary_model.dart';
 import '../../../services/sales.dart';
 import '../../../utils/constants/my_sharePrefs.dart';
@@ -37,6 +38,33 @@ class SalesProvider with ChangeNotifier {
   String get lastUpdatedTime => _lastUpdatedTimestamp != null
       ? DateTime.fromMillisecondsSinceEpoch(_lastUpdatedTimestamp!).toString()
       : '';
+
+  /// Delete loading state
+  bool _delLoad = false;
+  bool get delLoad => _delLoad;
+
+  /// Deletes a sale invoice by its invoice number.
+  Future<void> deleteInvoice(String invoiceNumber) async {
+    _delLoad = true;
+    notifyListeners();
+
+    final data = {"invoice_number": invoiceNumber};
+
+    try {
+      final response = await _salesService.deleteSaleInvoice(data);
+
+      if (response != null && response['message'] != null) {
+        ShowToastDialog.showToast(response['message']);
+      }
+    } catch (e) {
+      debugPrint("Delete Invoice Error: $e");
+      ShowToastDialog.showToast('An error occurred while deleting.');
+    } finally {
+      _delLoad = false;
+      notifyListeners();
+    }
+  }
+
 
   /// 🔍 Search with Debounce
   void updateSearch(String query) {
